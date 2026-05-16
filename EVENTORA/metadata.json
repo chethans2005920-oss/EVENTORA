@@ -1,0 +1,6 @@
+{
+  "name": "EVENTORA - Luxury AI Wedding Planner",
+  "description": "An enterprise-grade luxury wedding event organizer platform featuring AI concierge, secure bookings, and live event tracking with a focus on diverse Indian traditions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

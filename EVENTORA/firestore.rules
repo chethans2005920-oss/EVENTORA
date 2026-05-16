@@ -1,0 +1,158 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Entity Validations ---
+
+    function isValidUser(data) {
+      return data.uid == request.auth.uid 
+        && data.email is string && data.email.size() <= 256
+        && data.role in ['planner', 'client', 'guest']
+        && data.keys().hasAll(['uid', 'email', 'role'])
+        && data.keys().size() == 5; // uid, email, role, displayName, createdAt
+    }
+
+    function isValidWedding(data) {
+      return data.name is string && data.name.size() <= 200
+        && data.date is string
+        && data.ownerIds is list && data.ownerIds.size() > 0
+        && data.ownerIds[0] is string
+        && (data.status in ['planning', 'live', 'archived', 'cancelled'])
+        && data.keys().hasAll(['name', 'date', 'ownerIds', 'status', 'createdAt'])
+        && data.keys().size() <= 20;
+    }
+
+    function isValidTask(data) {
+      return data.weddingId is string && isValidId(data.weddingId)
+        && data.title is string && data.title.size() <= 200
+        && data.status in ['todo', 'in-progress', 'completed']
+        && data.priority in ['low', 'medium', 'high', 'critical']
+        && (!('dependencyId' in data) || (data.dependencyId is string && isValidId(data.dependencyId)))
+        && data.keys().hasAll(['weddingId', 'title', 'status', 'priority']);
+    }
+
+    function isValidLiveEvent(data) {
+      return data.title is string && data.title.size() <= 200
+        && data.status in ['scheduled', 'in-progress', 'completed', 'delayed']
+        && data.startTime is string
+        && (!('delayReason' in data) || (data.delayReason is string && data.delayReason.size() <= 500))
+        && data.keys().hasAll(['title', 'status', 'startTime']);
+    }
+
+    function isValidBooking(data) {
+      return data.vendorName is string && data.vendorName.size() <= 200
+        && data.vendorRole is string && data.vendorRole.size() <= 200
+        && data.cost is number && data.cost >= 0
+        && data.bookingDate is string
+        && data.keys().hasAll(['vendorName', 'vendorRole', 'cost', 'bookingDate']);
+    }
+
+    function isValidTransfer(data) {
+      return data.amount is number && data.amount >= 0
+        && data.type in ['deposit', 'top-up', 'settlement']
+        && data.description is string && data.description.size() <= 500
+        && data.date is string
+        && data.status in ['pending', 'completed', 'failed']
+        && data.keys().hasAll(['amount', 'type', 'description', 'date', 'status']);
+    }
+
+    // --- Access Rules ---
+
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) 
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName'])
+        && isValidUser(incoming());
+    }
+
+    match /weddings/{weddingId} {
+      function canAccessWedding(wData) {
+        return isSignedIn() && (request.auth.uid in wData.ownerIds || request.auth.uid in wData.plannerIds);
+      }
+
+      allow get: if canAccessWedding(existing());
+      allow list: if isSignedIn() && (request.auth.uid in resource.data.ownerIds || request.auth.uid in resource.data.plannerIds);
+      allow create: if isSignedIn() && isValidWedding(incoming()) && request.auth.uid in incoming().ownerIds;
+      allow update: if canAccessWedding(existing()) 
+        && isValidWedding(incoming())
+        && incoming().ownerIds == existing().ownerIds // Prevent ownership theft
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'date', 'status', 'budgetTotal', 'budgetSpent', 'plannerIds', 'customDomain', 'vendorRatings', 'bankingProfile', 'dissolvedAt', 'refundStatus', 'estimatedRefund'])
+        );
+      
+      // Sub-collections
+      match /tasks/{taskId} {
+        allow read: if canAccessWedding(get(/databases/$(database)/documents/weddings/$(weddingId)).data);
+        allow create: if canAccessWedding(get(/databases/$(database)/documents/weddings/$(weddingId)).data) && isValidTask(incoming());
+        allow update: if canAccessWedding(get(/databases/$(database)/documents/weddings/$(weddingId)).data) 
+          && isValidTask(incoming())
+          && (incoming().diff(existing()).affectedKeys().hasOnly(['title', 'status', 'deadline', 'assigneeId', 'priority', 'description', 'dependencyId']));
+        allow delete: if canAccessWedding(get(/databases/$(database)/documents/weddings/$(weddingId)).data);
+      }
+
+      match /guests/{guestId} {
+        allow read: if canAccessWedding(get(/databases/$(database)/documents/weddings/$(weddingId)).data);
+        allow write: if canAccessWedding(get(/databases/$(database)/documents/weddings/$(weddingId)).data);
+      }
+      
+      match /live_events/{eventId} {
+        allow read: if canAccessWedding(get(/databases/$(database)/documents/weddings/$(weddingId)).data) || 
+                     (get(/databases/$(database)/documents/weddings/$(weddingId)).data.status == 'live' && resource.data.isPublic == true);
+        allow create: if canAccessWedding(get(/databases/$(database)/documents/weddings/$(weddingId)).data) && isValidLiveEvent(incoming());
+        allow update: if canAccessWedding(get(/databases/$(database)/documents/weddings/$(weddingId)).data) 
+          && isValidLiveEvent(incoming())
+          && (incoming().diff(existing()).affectedKeys().hasOnly(['title', 'status', 'startTime', 'description', 'vendorId', 'vendorStatus', 'isPublic', 'delayReason']));
+        allow delete: if canAccessWedding(get(/databases/$(database)/documents/weddings/$(weddingId)).data);
+      }
+
+      match /ai_chats/{chatId} {
+        allow read: if isOwner(resource.data.userId); // Only the user who chatted can read it
+        allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+        allow update: if isOwner(existing().userId) && incoming().userId == request.auth.uid;
+      }
+
+      match /bookings/{bookingId} {
+        allow read: if canAccessWedding(get(/databases/$(database)/documents/weddings/$(weddingId)).data);
+        allow create: if canAccessWedding(get(/databases/$(database)/documents/weddings/$(weddingId)).data) && isValidBooking(incoming());
+        allow delete: if canAccessWedding(get(/databases/$(database)/documents/weddings/$(weddingId)).data);
+      }
+
+      match /transfers/{transferId} {
+        allow read: if canAccessWedding(get(/databases/$(database)/documents/weddings/$(weddingId)).data);
+        allow create: if canAccessWedding(get(/databases/$(database)/documents/weddings/$(weddingId)).data) && isValidTransfer(incoming());
+      }
+    }
+
+    match /vendors/{vendorId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Only admin (via backend/privileged) can write vendors
+    }
+  }
+}

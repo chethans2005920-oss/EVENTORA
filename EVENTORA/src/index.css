@@ -1,0 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Inter:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Cormorant Garamond", serif;
+  --font-display: "Montserrat", sans-serif;
+
+  /* White Gold Palette */
+  --color-gold-50: #fbf9f4;
+  --color-gold-100: #f4f0e6;
+  --color-gold-200: #e8dfcc;
+  --color-gold-300: #d6caac;
+  --color-gold-400: #c6b58e;
+  --color-gold-500: #b5a472; /* White Gold base */
+  --color-gold-600: #9a8a5b;
+  --color-gold-700: #7a6c47;
+  --color-gold-800: #64583b;
+  --color-gold-900: #554b33;
+  --color-gold-950: #312b1d;
+
+  /* Indian Luxury Palette */
+  --color-saffron-50: #fff9f2;
+  --color-saffron-100: #ffeed9;
+  --color-saffron-500: #f59e0b; /* Saffron/Marigold */
+  --color-saffron-600: #d97706;
+  
+  --color-crimson-500: #991b1b; /* Deep Red for accents */
+  
+  --color-ivory: #ffffff;
+  --color-cream: #fafaf9;
+
+  /* White Gold (Updated for Light Theme) */
+  --color-gold-50: #fefcf8;
+  --color-gold-100: #fdf8eb;
+  --color-gold-500: #b5a472;
+  --color-gold-950: #1c1912;
+
+  /* Sky Palette (Not needed for background anymore, but keep for accents) */
+  --color-sky-950: #050510;
+}
+
+@layer base {
+  body {
+    @apply bg-ivory text-gold-950 font-sans antialiased selection:bg-saffron-500/20;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif tracking-tight text-gold-950;
+  }
+}
+
+.luxury-card {
+  @apply bg-white border border-gold-500/10 rounded-2xl p-6 transition-all duration-500 shadow-sm hover:shadow-xl hover:border-gold-500/30 hover:-translate-y-1;
+}
+
+.gold-gradient-text {
+  @apply bg-gradient-to-r from-saffron-600 via-gold-500 to-crimson-500 bg-clip-text text-transparent;
+}
+
+.gold-button {
+  @apply bg-gold-950 hover:bg-gold-900 text-white font-display font-semibold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg shadow-gold-950/10;
+}
+
+.platinum-button {
+  @apply border border-gold-500/20 hover:bg-gold-50 text-gold-950 font-display font-medium py-3 px-8 rounded-full transition-all duration-300;
+}
+
+.indian-pattern {
+  background-image: url("https://www.transparenttextures.com/patterns/p6.png"); /* Simple subtle pattern */
+  opacity: 0.05;
+}
+
+.mandala-glow {
+  @apply shadow-[0_0_40px_rgba(245,158,11,0.1)];
+}

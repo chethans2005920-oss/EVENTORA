@@ -1,0 +1,190 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account information and preferences.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["planner", "client", "guest"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Wedding": {
+      "title": "Wedding Event",
+      "description": "The central event document for a wedding.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "location": { "type": "string" },
+        "budgetTotal": { "type": "number" },
+        "budgetSpent": { "type": "number" },
+        "status": { "type": "string", "enum": ["planning", "live", "archived", "cancelled"] },
+        "dissolvedAt": { "type": "string", "format": "date-time" },
+        "refundStatus": { "type": "string", "enum": ["initiated", "processed", "completed"] },
+        "estimatedRefund": { "type": "number" },
+        "customDomain": {
+          "type": "object",
+          "properties": {
+            "url": { "type": "string" },
+            "status": { "type": "string", "enum": ["pending", "verified", "active"] },
+            "dnsConfig": {
+              "type": "object",
+              "properties": {
+                "type": { "type": "string" },
+                "value": { "type": "string" }
+              }
+            }
+          }
+        },
+        "vendorRatings": {
+          "type": "object",
+          "additionalProperties": { "type": "number", "minimum": 1, "maximum": 5 }
+        },
+        "ownerIds": { "type": "array", "items": { "type": "string" } },
+        "plannerIds": { "type": "array", "items": { "type": "string" } },
+        "bankingProfile": { "$ref": "#/entities/BankingProfile" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "date", "ownerIds"]
+    },
+    "Vendor": {
+      "title": "Vendor",
+      "description": "Information about a service provider.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "contact": { "type": "string" },
+        "basePrice": { "type": "number" }
+      },
+      "required": ["name", "category"]
+    },
+    "Task": {
+      "title": "Planning Task",
+      "description": "A specific task for the wedding planning process.",
+      "type": "object",
+      "properties": {
+        "weddingId": { "type": "string" },
+        "title": { "type": "string" },
+        "status": { "type": "string", "enum": ["todo", "in-progress", "completed"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+        "deadline": { "type": "string", "format": "date-time" },
+        "assigneeId": { "type": "string" },
+        "description": { "type": "string" },
+        "dependencyId": { "type": "string" }
+      },
+      "required": ["weddingId", "title", "status", "priority"]
+    },
+    "Guest": {
+      "title": "Guest",
+      "description": "A guest invited to a wedding.",
+      "type": "object",
+      "properties": {
+        "weddingId": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "rsvpStatus": { "type": "string", "enum": ["attending", "declined", "pending"] },
+        "tableNumber": { "type": "number" },
+        "dietaryRequirements": { "type": "string" }
+      },
+      "required": ["weddingId", "name", "rsvpStatus"]
+    },
+    "AIConversation": {
+      "title": "AI Conversation",
+      "description": "A log of AI interaction for a specific wedding.",
+      "type": "object",
+      "properties": {
+        "weddingId": { "type": "string" },
+        "userId": { "type": "string" },
+        "weddingSnapshot": { "type": "object" },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "role": { "type": "string", "enum": ["user", "model"] },
+              "text": { "type": "string" },
+              "timestamp": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      },
+      "required": ["weddingId", "userId"]
+    },
+    "LiveEvent": {
+      "title": "Live Event Step",
+      "description": "A specific moment in the live wedding timeline.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["scheduled", "in-progress", "completed", "delayed"] },
+        "vendorId": { "type": "string" },
+        "vendorStatus": { "type": "string" },
+        "isPublic": { "type": "boolean" },
+        "delayReason": { "type": "string" }
+      },
+      "required": ["title", "startTime", "status"]
+    },
+    "Booking": {
+      "title": "Vendor Booking",
+      "description": "A record of a finalized vendor contract.",
+      "type": "object",
+      "properties": {
+        "vendorName": { "type": "string" },
+        "vendorRole": { "type": "string" },
+        "contact": { "type": "string" },
+        "cost": { "type": "number" },
+        "bookingDate": { "type": "string", "format": "date-time" },
+        "confirmedBy": { "type": "string" }
+      },
+      "required": ["vendorName", "vendorRole", "cost", "bookingDate"]
+    },
+    "Transfer": {
+      "title": "Wealth Transfer",
+      "description": "A record of a financial transaction or escrow settlement.",
+      "type": "object",
+      "properties": {
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["deposit", "top-up", "settlement"] },
+        "description": { "type": "string" },
+        "recipient": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["pending", "completed", "failed"] }
+      },
+      "required": ["amount", "type", "description", "date", "status"]
+    },
+    "BankingProfile": {
+      "title": "Royal Banking Profile",
+      "description": "Encrypted settlement details for the treasury.",
+      "type": "object",
+      "properties": {
+        "accountName": { "type": "string" },
+        "accountNumber": { "type": "string" },
+        "bankName": { "type": "string" },
+        "ifscCode": { "type": "string" },
+        "swiftCode": { "type": "string" }
+      },
+      "required": ["accountName", "accountNumber", "bankName", "ifscCode"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "Global user profiles." },
+    "/weddings/{weddingId}": { "schema": "Wedding", "description": "Wedding events." },
+    "/weddings/{weddingId}/tasks/{taskId}": { "schema": "Task", "description": "Tasks for a wedding." },
+    "/weddings/{weddingId}/guests/{guestId}": { "schema": "Guest", "description": "Guests for a wedding." },
+    "/weddings/{weddingId}/ai_chats/{chatId}": { "schema": "AIConversation", "description": "AI assistance logs." },
+    "/weddings/{weddingId}/live_events/{eventId}": { "schema": "LiveEvent", "description": "Real-time timeline steps." },
+    "/weddings/{weddingId}/bookings/{bookingId}": { "schema": "Booking", "description": "History of vendor contracts." },
+    "/weddings/{weddingId}/transfers/{transferId}": { "schema": "Transfer", "description": "Financial ledger for a wedding." },
+    "/vendors/{vendorId}": { "schema": "Vendor", "description": "Global vendor list." }
+  }
+}
